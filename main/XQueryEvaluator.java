@@ -560,48 +560,5 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
         return aggregate;
     }
 
-    private static void printParseTree(ParseTree tree, XQueryParser parser) {
-        System.out.println("\nParse Tree Structure:");
-        printNode(tree, parser, 0);
-    }
-    
-    private static void printNode(ParseTree node, XQueryParser parser, int level) {
-        // Print indentation
-        String indent = "  ".repeat(level);
-        
-        // Print node info
-        if (node.getChildCount() == 0) {
-            // Leaf node
-            System.out.printf("%s└─ %s: '%s'%n", 
-                indent, 
-                getNodeType(node, parser), 
-                node.getText());
-        } else {
-            // Internal node
-            System.out.printf("%s├─ %s%n", 
-                indent, 
-                getNodeType(node, parser));
-            
-            // Print children
-            for (int i = 0; i < node.getChildCount(); i++) {
-                printNode(node.getChild(i), parser, level + 1);
-            }
-        }
-    }
-    
-    private static String getNodeType(ParseTree node, XQueryParser parser) {
-        if (node instanceof RuleContext) {
-            int ruleIndex = ((RuleContext) node).getRuleIndex();
-            String ruleName = parser.getRuleNames()[ruleIndex];
-            return ruleName;
-        } else if (node instanceof TerminalNode) {
-            int tokenType = ((TerminalNode) node).getSymbol().getType();
-            String tokenName = parser.getVocabulary().getSymbolicName(tokenType);
-            return tokenName != null ? tokenName : String.valueOf(tokenType);
-        }
-        return node.getClass().getSimpleName();
-    }
-
-
 
 }

@@ -197,7 +197,6 @@ public class RewriteHelper {
                                            List<List<String>> conditions,
                                            boolean[] isLocal) 
     {
-        System.out.println("Rewrite Multi Group FLWR");
 
         // We'll chain the groups from 0..(n-1)
         int n = classification.size();
@@ -285,7 +284,6 @@ public class RewriteHelper {
         returnClause = modifyReturnClause(returnClause);
         finalQuery.append(returnClause);
 
-        System.out.println("Final Multi-Group Query:\n" + finalQuery);
 
         return finalQuery.toString();
     }
