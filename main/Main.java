@@ -21,6 +21,7 @@ import org.antlr.v4.runtime.tree.*;
 import main.antlr.*;
 import javax.xml.parsers.ParserConfigurationException;
 
+
 public class Main {
     public static void main(String[] args) {
         if (args.length != 3) {
@@ -28,12 +29,9 @@ public class Main {
             System.exit(1);
         }
         
-        String inputXmlPath = args[0];
-        System.out.println("Input XML path: " + inputXmlPath);  
+        String inputXmlPath = args[0];  
         String queryFilePath = args[1];
-        System.out.println("Query file path: " + queryFilePath);
         String outputXmlPath = args[2];
-        System.out.println("Output XML path: " + outputXmlPath);
         
         try {
             // Read query from file and trim whitespace
@@ -76,17 +74,13 @@ public class Main {
         
         if (!isXQuery && !query.startsWith("doc(")) {
             File xmlFile = new File(inputXmlPath);
-            System.out.println("File exists: " + xmlFile.exists());
-            System.out.println("Absolute path: " + xmlFile.getAbsolutePath());
             String xmlURL = xmlFile.toURI().toString();
-            System.out.println("XML URL: " + xmlURL);
             query = "doc(\"" + xmlURL + "\")" + query;
         }
         
         // For XQuery queries, update any document() call to use absolute URLs.
         if (isXQuery) {
             query = fixDocumentCalls(query, inputXmlPath);
-            System.out.println("Modified XQuery: " + query);
             XQueryEvaluator evaluator = new XQueryEvaluator();
             LinkedList<Node> result = evaluateXQuery(query, evaluator);
             
@@ -98,7 +92,6 @@ public class Main {
             return result;
         } else {
             query = modifyXPath(query, inputXmlPath);
-            System.out.println("Modified XPath: " + query);
             XPathEvaluator evaluator = new XPathEvaluator();
             return evaluateXPath(query, evaluator);
         }
@@ -106,7 +99,6 @@ public class Main {
 
     private static String modifyXPath(String query, String inputXmlPath) {
         // Convert the input XML path to an absolute file URL
-        System.out.println("Query in modifyXPath: " + query);
         int closeQuote = 0;
         for (int i = 0; i < query.length(); i++) {
             char c = query.charAt(i); // Get character at index i
@@ -144,12 +136,9 @@ public class Main {
             String filename = inputXmlPath;
             // If the filename doesn't already contain a protocol, convert it.
             if (!filename.contains("://")) {
-                System.out.println("Filename: " + filename);
                 String absolutePath = new File(filename).toURI().toString();
-                System.out.println("Absoloute Path: " + absolutePath);
                 matcher.appendReplacement(sb, "document(\"" + absolutePath + "\")");
             } else {
-                System.out.println("Filename already contains protocol: " + filename);
                 matcher.appendReplacement(sb, matcher.group(0));
             }
         }
@@ -168,12 +157,24 @@ public class Main {
     }
     
     private static LinkedList<Node> evaluateXQuery(String xquery, XQueryEvaluator evaluator) {
-        System.out.println("Evaluating XQuery query: " + xquery);
-        XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(xquery));
-        XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
-        ParseTree tree = parser.xquery();
-        List<Node> result = evaluator.visit(tree);
-        return new LinkedList<>(result);
+        System.out.println("Evaluating XQuery query");
+        String rewritten = RewriteHelper.rewriteXQuery(xquery);
+        System.out.println("Rewritten XQuery: " + rewritten);
+        if (rewritten.isEmpty()) {
+            XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(xquery));
+            XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
+            ParseTree tree = parser.xquery();
+            List<Node> result = evaluator.visit(tree);
+            return new LinkedList<>(result);
+        } else {
+            System.out.println("Rewritten XQuery is not empty so we are using the rewritten query");
+            XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(rewritten));
+            XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
+            ParseTree tree = parser.xquery();
+            // printParseTree(tree, parser);
+            List<Node> result = evaluator.visit(tree);
+            return new LinkedList<>(result);
+        }
     }
 
         /**
@@ -206,5 +207,50 @@ public class Main {
             return new LinkedList<>();
         }
     }
+
+
+    private static void printParseTree(ParseTree tree, XQueryParser parser) {
+        System.out.println("\nParse Tree Structure:");
+        printNode(tree, parser, 0);
+    }
+    
+    private static void printNode(ParseTree node, XQueryParser parser, int level) {
+        // Print indentation
+        String indent = "  ".repeat(level);
+        
+        // Print node info
+        if (node.getChildCount() == 0) {
+            // Leaf node
+            System.out.printf("%s└─ %s: '%s'%n", 
+                indent, 
+                getNodeType(node, parser), 
+                node.getText());
+        } else {
+            // Internal node
+            System.out.printf("%s├─ %s%n", 
+                indent, 
+                getNodeType(node, parser));
+            
+            // Print children
+            for (int i = 0; i < node.getChildCount(); i++) {
+                printNode(node.getChild(i), parser, level + 1);
+            }
+        }
+    }
+    
+    private static String getNodeType(ParseTree node, XQueryParser parser) {
+        if (node instanceof RuleContext) {
+            int ruleIndex = ((RuleContext) node).getRuleIndex();
+            String ruleName = parser.getRuleNames()[ruleIndex];
+            return ruleName;
+        } else if (node instanceof TerminalNode) {
+            int tokenType = ((TerminalNode) node).getSymbol().getType();
+            String tokenName = parser.getVocabulary().getSymbolicName(tokenType);
+            return tokenName != null ? tokenName : String.valueOf(tokenType);
+        }
+        return node.getClass().getSimpleName();
+    }
+
+
 
 }

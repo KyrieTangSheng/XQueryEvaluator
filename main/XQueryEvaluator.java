@@ -6,9 +6,15 @@ import java.util.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import main.antlr.XQueryBaseVisitor;
+import main.antlr.XQueryLexer;
 import main.antlr.XQueryParser;
 import main.antlr.XPathLexer;
 import main.antlr.XPathParser;
+import org.antlr.v4.runtime.tree.*;
+import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
+
 
 public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
 
@@ -228,14 +234,13 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
         return Collections.singletonList(newElement);
     }
 
-    /**
-     * xquery: forClause letClause? whereClause? returnClause  # XQueryFLWR
-     */
     @Override
     public List<Node> visitXQueryFLWR(XQueryParser.XQueryFLWRContext ctx) {
+
         // Evaluate for-clause to produce a list of variable bindings
         List<Map<String, List<Node>>> forBindings = evaluateForClause(ctx.forClause());
         List<Node> finalResults = new ArrayList<>();
+    
 
         // Save the current (outer) environment
         Map<String, List<Node>> savedEnv = new HashMap<>(env.peek());
@@ -281,6 +286,8 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
 
         return finalResults;
     }
+
+
 
     /**
      * xquery: letClause xquery  # XQueryLet
@@ -552,4 +559,6 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
         }
         return aggregate;
     }
+
+
 }
