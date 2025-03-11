@@ -23,7 +23,6 @@ public class RewriteHelper {
 
             // This should parse the entire XQuery, e.g. starting at xquery rule
             XQueryParser.XqueryContext tree = parser.xquery();
-            System.out.println("Tree: " + tree);
 
             // Check if this is a FLWR expression
             if (tree instanceof XQueryParser.XQueryFLWRContext) {
@@ -41,7 +40,6 @@ public class RewriteHelper {
 
 
     private static String rewriteFLWR(XQueryParser.XQueryFLWRContext ctx) {
-        System.out.println("Rewriting FLWR expression...");
         
         // 1. Classify the parent-child relationships
 
@@ -65,7 +63,6 @@ public class RewriteHelper {
                 classification.add(newSet);
             }
         }
-        System.out.println("Classification: " + classification);
 
         // 2. Parse the Where clause condition
 
@@ -73,7 +70,6 @@ public class RewriteHelper {
         String whereClause = ctx.whereClause().cond().getText();
         String[] condParts = whereClause.split("and");
         List<List<String>> conditions = parseCondParts(condParts);
-        System.out.println("Conditions: " + conditions);
 
         // Create parallel array to track if each condition is local
         boolean[] isLocal = new boolean[conditions.size()];
@@ -111,19 +107,14 @@ public class RewriteHelper {
         }
 
         if (classification.size() == 1) {
-            System.out.println("Rewrite 1 Group FLWR");
             // No join needed; just build a single subquery or do a normal FLWR
             return "";  // or some indication "no rewrite"
         } else if (classification.size() == 2) {
             // The code you already have for 2-group join
-            System.out.println("Rewrite 2 Group FLWR");
             String result = rewriteTwoGroupFLWR(ctx, classification, conditions, isLocal);
-            System.out.println("Result: " +result);
             return result;
         } else {
-            System.out.println("Rewrite Multi Group FLWR");
             String result = rewriteMultiGroupFLWR(ctx, classification, conditions, isLocal);
-            System.out.println("Result: " +result);
             return result;
         }
     }
@@ -199,10 +190,6 @@ public class RewriteHelper {
             returnClause = modifyReturnClause(returnClause);
 
             sb.append(returnClause);
-
-            // 7) Done
-            System.out.println("Final Query: " + sb.toString());
-
             return sb.toString();
     }
     private static String rewriteMultiGroupFLWR(XQueryParser.XQueryFLWRContext ctx,
