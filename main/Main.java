@@ -170,11 +170,22 @@ public class Main {
     
     private static LinkedList<Node> evaluateXQuery(String xquery, XQueryEvaluator evaluator) {
         System.out.println("Evaluating XQuery query: " + xquery);
-        XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(xquery));
-        XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
-        ParseTree tree = parser.xquery();
-        List<Node> result = evaluator.visit(tree);
-        return new LinkedList<>(result);
+        String rewritten = RewriteHelper.rewriteXQuery(xquery);
+        System.out.println("Rewritten XQuery: " + rewritten);
+        if (rewritten.isEmpty()) {
+            XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(xquery));
+            XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
+            ParseTree tree = parser.xquery();
+            List<Node> result = evaluator.visit(tree);
+            return new LinkedList<>(result);
+        } else {
+            System.out.println("Rewritten XQuery is not empty: " + rewritten);
+            XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(rewritten));
+            XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
+            ParseTree tree = parser.xquery();
+            List<Node> result = evaluator.visit(tree);
+            return new LinkedList<>(result);
+        }
     }
 
         /**
