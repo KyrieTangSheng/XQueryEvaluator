@@ -206,6 +206,29 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
     }
 
     /**
+     * xquery: '<' tagName '>' xquery '</' tagName '>'  # XQueryDirectTag
+     */
+    @Override
+    public List<Node> visitXQueryDirectTag(XQueryParser.XQueryDirectTagContext ctx) {
+        String tagName = ctx.tagName(0).getText();
+        
+        Element newElement = outputDoc.createElement(tagName);
+        List<Node> contentNodes = visit(ctx.xquery());
+        
+        if (contentNodes != null) {
+            for (Node contentNode : contentNodes) {
+                Node importedNode = contentNode;
+                if (contentNode.getOwnerDocument() != outputDoc) {
+                    importedNode = outputDoc.importNode(contentNode, true);
+                }
+                newElement.appendChild(importedNode);
+            }
+        }
+        
+        return Collections.singletonList(newElement);
+    }
+
+    /**
      * xquery: forClause letClause? whereClause? returnClause  # XQueryFLWR
      */
     @Override
@@ -279,6 +302,38 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
             env.pop();
         }
     }
+
+
+    // xquery: 'join' '(' xquery ',' xquery ',' '[' Name ']' ',' '[' Name ']' ')' # XQueryJoin
+    @Override
+    public List<Node> visitXQueryJoin(XQueryParser.XQueryJoinContext ctx) {
+        // Evaluate the two subqueries
+        List<Node> leftNodes = visit(ctx.xquery(0));
+        List<Node> rightNodes = visit(ctx.xquery(1));
+        
+        // Extract join attributes
+        String leftAttr = ctx.Name(0).getText();
+        String rightAttr = ctx.Name(1).getText();
+        
+        // Create tuple sets
+        TupleSet leftSet = new TupleSet(outputDoc);
+        for (Node node : leftNodes) {
+            leftSet.addTuple(node);
+        }
+        
+        TupleSet rightSet = new TupleSet(outputDoc);
+        for (Node node : rightNodes) {
+            rightSet.addTuple(node);
+        }
+        
+        // Perform hash join
+        TupleSet result = leftSet.hashJoin(rightSet, 
+                                          Collections.singletonList(leftAttr), 
+                                          Collections.singletonList(rightAttr));
+        
+        return result.getTuples();
+    }
+        
 
     // ---------------------------------------------------------
     //   Helper Methods for FLWR
@@ -477,6 +532,7 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
             }
         }
     }
+
 
     // ---------------------------------------------------------
     //    Default visitor aggregator overrides

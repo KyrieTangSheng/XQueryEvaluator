@@ -11,12 +11,26 @@ import org.antlr.v4.runtime.tree.ParseTreeVisitor;
  */
 public interface XQueryVisitor<T> extends ParseTreeVisitor<T> {
 	/**
+	 * Visit a parse tree produced by the {@code XQueryDirectTag}
+	 * labeled alternative in {@link XQueryParser#xquery}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitXQueryDirectTag(XQueryParser.XQueryDirectTagContext ctx);
+	/**
 	 * Visit a parse tree produced by the {@code XQueryParentheses}
 	 * labeled alternative in {@link XQueryParser#xquery}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitXQueryParentheses(XQueryParser.XQueryParenthesesContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code XQueryJoin}
+	 * labeled alternative in {@link XQueryParser#xquery}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitXQueryJoin(XQueryParser.XQueryJoinContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code XQueryVariable}
 	 * labeled alternative in {@link XQueryParser#xquery}.

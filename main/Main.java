@@ -73,9 +73,6 @@ public class Main {
     private static LinkedList<Node> evaluateQuery(String query, String inputXmlPath) {
         boolean isXQuery = isXQuery(query);
         query = query.replaceAll("[“”]", "\""); 
-        // Add debug logging
-        System.out.println("mod" + query);
-        System.out.println(inputXmlPath);
         
         if (!isXQuery && !query.startsWith("doc(")) {
             File xmlFile = new File(inputXmlPath);
@@ -91,7 +88,14 @@ public class Main {
             query = fixDocumentCalls(query, inputXmlPath);
             System.out.println("Modified XQuery: " + query);
             XQueryEvaluator evaluator = new XQueryEvaluator();
-            return evaluateXQuery(query, evaluator);
+            LinkedList<Node> result = evaluateXQuery(query, evaluator);
+            
+            // Check if the query contains a JOIN operation
+            boolean containsJoin = query.contains("join(");
+            if (containsJoin) {
+                return wrapInResultElement(result);
+            }
+            return result;
         } else {
             query = modifyXPath(query, inputXmlPath);
             System.out.println("Modified XPath: " + query);

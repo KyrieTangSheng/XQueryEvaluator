@@ -14,8 +14,10 @@ xquery
     | xquery '/' relativePath                               # XQueryPath
     | xquery '//' relativePath                              # XQueryDoubleSlash
     | '<' tagName '>' '{' xquery '}' '</' tagName '>'       # XQueryTag
+    | '<' tagName '>' xquery '</' tagName '>'               # XQueryDirectTag
     | forClause letClause? whereClause? returnClause        # XQueryFLWR
     | letClause xquery                                      # XQueryLet
+    | 'join' '(' xquery ',' xquery ',' '[' Name ']' ',' '[' Name ']' ')' # XQueryJoin
     ;
 
 // ---------------------

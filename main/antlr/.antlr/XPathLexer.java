@@ -1,4 +1,4 @@
-// Generated from /Users/tangsheng/Desktop/CourseWork/2025Winter/DBImpl/m3/main/antlr/XPath.g4 by ANTLR 4.13.1
+// Generated from /Users/tangsheng/Desktop/CodeProjects/XQueryEvaluator/main/antlr/XPath.g4 by ANTLR 4.13.1
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.Token;
