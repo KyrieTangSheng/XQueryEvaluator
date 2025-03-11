@@ -23,6 +23,12 @@ cd ../..
 
 javac -cp .:antlr-4.13.2-complete.jar main/Main.java
 
+# run milestone 2 legacy tests
+for i in {1..2}; do
+java -cp .:antlr-4.13.2-complete.jar main.Main data/j_caesar.xml data/query/q$i.txt data/result/q$i.xml
+done
+
+# run milestone 3 tests as if rewrite has already been done
 for i in {1..2}; do
 java -cp .:antlr-4.13.2-complete.jar main.Main data/j_caesar.xml data/query/q$i.txt data/result/q$i.xml
 done
