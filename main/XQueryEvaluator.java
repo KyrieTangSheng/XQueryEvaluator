@@ -6,9 +6,15 @@ import java.util.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import main.antlr.XQueryBaseVisitor;
+import main.antlr.XQueryLexer;
 import main.antlr.XQueryParser;
 import main.antlr.XPathLexer;
 import main.antlr.XPathParser;
+import org.antlr.v4.runtime.tree.*;
+import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
+
 
 public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
 
@@ -18,6 +24,7 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
     private Deque<Map<String, List<Node>>> env;
     // Delegate evaluator for absolute/relative XPath expressions
     private XPathEvaluator xpath;
+    boolean rewritten = false;
 
     public XQueryEvaluator() {
         try {
@@ -228,36 +235,74 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
         return Collections.singletonList(newElement);
     }
 
-   /**
-     * xquery: forClause letClause? whereClause? returnClause  # XQueryFLWR
-     */
     @Override
     public List<Node> visitXQueryFLWR(XQueryParser.XQueryFLWRContext ctx) {
 
-        System.out.println("\nDebug FLWR Expression:");
-    
-        // 1) Attempt to build a rewritten query string based on the classification approach
-        //    that you described in your code snippet.
-        String rewrittenQuery = rewriteFLWR(ctx);
-    
-        List<Node> finalResults;
-        if (rewrittenQuery.isEmpty()) {
-            // If no rewrite was needed or possible, just do the normal FLWR evaluation
-            finalResults = evaluatePlainFLWR(ctx);
-        } else {
-            // We got a join-based XQuery string. We re-parse and evaluate it:
-            System.out.println("Rewritten XQuery:\n" + rewrittenQuery);
-    
-            // 1) Parse the new query
-            //XQueryParser.XqueryContext newTree = parseXQueryString(rewrittenQuery);
-    
-            // 2) Evaluate the new parse tree by visiting it
-            //finalResults = visit(newTree);
-            finalResults = new ArrayList<>();
+        // Evaluate for-clause to produce a list of variable bindings
+        List<Map<String, List<Node>>> forBindings = evaluateForClause(ctx.forClause());
+        List<Node> finalResults = new ArrayList<>();
+        
+        if(!rewritten) {
+            String rewrittenQuery = rewriteFLWR(ctx);
+            if (!rewrittenQuery.isEmpty()) {
+                rewritten = true;  // Set flag to true
+                System.out.println("Evaluating rewritten XQuery:\n" + rewrittenQuery);
+                XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(rewrittenQuery));
+                XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
+                ParseTree newTree = parser.xquery();
+                // printParseTree(newTree, parser);
+                System.out.println(rewritten);
+                finalResults = visit(newTree);
+            }
         }
-    
+
+        // Save the current (outer) environment
+        Map<String, List<Node>> savedEnv = new HashMap<>(env.peek());
+
+        try {
+            // For each binding from the for-clause
+            for (Map<String, List<Node>> binding : forBindings) {
+                // Create a new scope on top of saved environment
+                Map<String, List<Node>> newScope = new HashMap<>(savedEnv);
+                newScope.putAll(binding);
+                env.push(newScope);
+
+                try {
+                    // If there's a let-clause, evaluate it
+                    if (ctx.letClause() != null) {
+                        Map<String, List<Node>> letBindings = evaluateLetClause(ctx.letClause());
+                        env.peek().putAll(letBindings);
+                    }
+
+                    // If there's a where-clause, check condition
+                    boolean pass = true;
+                    if (ctx.whereClause() != null) {
+                        pass = evaluateCondition(ctx.whereClause().cond());
+                    }
+
+                    // If condition passes, evaluate the return-clause
+                    if (pass) {
+                        List<Node> ret = visit(ctx.returnClause().xquery());
+                        if (ret != null) {
+                            finalResults.addAll(ret);
+                        }
+                    }
+                } finally {
+                    // Pop this iteration's scope
+                    env.pop();
+                }
+            }
+        } finally {
+            // Restore the original env scope
+            env.peek().clear();
+            env.peek().putAll(savedEnv);
+        }
+
         return finalResults;
     }
+
+
+
 
     private String rewriteFLWR(XQueryParser.XQueryFLWRContext ctx) {
         System.out.println("Rewriting FLWR expression...");
@@ -338,12 +383,12 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
             System.out.println("Rewrite 2 Group FLWR");
             String result = rewriteTwoGroupFLWR(ctx, classification, conditions, isLocal);
             System.out.println("Result: " +result);
-            return "";
+            return result;
         } else {
             System.out.println("Rewrite Multi Group FLWR");
             String result = rewriteMultiGroupFLWR(ctx, classification, conditions, isLocal);
             System.out.println("Result: " +result);
-            return "";
+            return result;
         }
     }
 
@@ -662,6 +707,8 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
 
     private List<Node> evaluatePlainFLWR(XQueryParser.XQueryFLWRContext ctx) {
 
+        System.out.println("this is plain FLWR");
+        rewritten = true;
         List<Map<String, List<Node>>> forBindings = evaluateForClause(ctx.forClause());
         List<Node> finalResults = new ArrayList<>();
 
@@ -981,4 +1028,49 @@ public class XQueryEvaluator extends XQueryBaseVisitor<List<Node>> {
         }
         return aggregate;
     }
+
+    private static void printParseTree(ParseTree tree, XQueryParser parser) {
+        System.out.println("\nParse Tree Structure:");
+        printNode(tree, parser, 0);
+    }
+    
+    private static void printNode(ParseTree node, XQueryParser parser, int level) {
+        // Print indentation
+        String indent = "  ".repeat(level);
+        
+        // Print node info
+        if (node.getChildCount() == 0) {
+            // Leaf node
+            System.out.printf("%s└─ %s: '%s'%n", 
+                indent, 
+                getNodeType(node, parser), 
+                node.getText());
+        } else {
+            // Internal node
+            System.out.printf("%s├─ %s%n", 
+                indent, 
+                getNodeType(node, parser));
+            
+            // Print children
+            for (int i = 0; i < node.getChildCount(); i++) {
+                printNode(node.getChild(i), parser, level + 1);
+            }
+        }
+    }
+    
+    private static String getNodeType(ParseTree node, XQueryParser parser) {
+        if (node instanceof RuleContext) {
+            int ruleIndex = ((RuleContext) node).getRuleIndex();
+            String ruleName = parser.getRuleNames()[ruleIndex];
+            return ruleName;
+        } else if (node instanceof TerminalNode) {
+            int tokenType = ((TerminalNode) node).getSymbol().getType();
+            String tokenName = parser.getVocabulary().getSymbolicName(tokenType);
+            return tokenName != null ? tokenName : String.valueOf(tokenType);
+        }
+        return node.getClass().getSimpleName();
+    }
+
+
+
 }
