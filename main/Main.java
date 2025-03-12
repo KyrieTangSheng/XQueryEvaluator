@@ -81,11 +81,19 @@ public class Main {
         // For XQuery queries, update any document() call to use absolute URLs.
         if (isXQuery) {
             query = fixDocumentCalls(query, inputXmlPath);
+            
+            // Move rewriting logic here before evaluating
+            String rewrittenQuery = RewriteHelper.rewriteXQuery(query);
+            System.out.println("Rewritten XQuery: " + rewrittenQuery);
+            
+            // Use rewritten query if not empty, otherwise use original
+            String finalQuery = rewrittenQuery.isEmpty() ? query : rewrittenQuery;
+            
             XQueryEvaluator evaluator = new XQueryEvaluator();
-            LinkedList<Node> result = evaluateXQuery(query, evaluator);
+            LinkedList<Node> result = evaluateXQuery(finalQuery, evaluator);
             
             // Check if the query contains a JOIN operation
-            boolean containsJoin = query.contains("join(");
+            boolean containsJoin = query.contains("join(") || rewrittenQuery.contains("join(");
             if (containsJoin) {
                 return wrapInResultElement(result);
             }
@@ -158,23 +166,13 @@ public class Main {
     
     private static LinkedList<Node> evaluateXQuery(String xquery, XQueryEvaluator evaluator) {
         System.out.println("Evaluating XQuery query");
-        String rewritten = RewriteHelper.rewriteXQuery(xquery);
-        System.out.println("Rewritten XQuery: " + rewritten);
-        if (rewritten.isEmpty()) {
-            XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(xquery));
-            XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
-            ParseTree tree = parser.xquery();
-            List<Node> result = evaluator.visit(tree);
-            return new LinkedList<>(result);
-        } else {
-            System.out.println("Rewritten XQuery is not empty so we are using the rewritten query");
-            XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(rewritten));
-            XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
-            ParseTree tree = parser.xquery();
-            // printParseTree(tree, parser);
-            List<Node> result = evaluator.visit(tree);
-            return new LinkedList<>(result);
-        }
+        
+        // Simplified to just evaluate the query without rewriting
+        XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(xquery));
+        XQueryParser parser = new XQueryParser(new CommonTokenStream(lexer));
+        ParseTree tree = parser.xquery();
+        List<Node> result = evaluator.visit(tree);
+        return new LinkedList<>(result);
     }
 
         /**
