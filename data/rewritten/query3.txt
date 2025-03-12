@@ -2,13 +2,13 @@ for $tuple in join(
   (
 join(
   (
-  for $d1 in document("file:/Users/tony/Desktop/milestone2/data/j_caesar.xml")/data/d,
+  for $d1 in document("file:/Users/tangsheng/Desktop/CodeProjects/XQueryEvaluator/data/large-data.xml")/data/d,
       $id1 in $d1/id/text(),
       $a1 in $d1/a4/text()
   return <tuple> <d1>{$d1}</d1>, <id1>{$id1}</id1>, <a1>{$a1}</a1></tuple>
   ),
   (
-  for $d2 in document("file:/Users/tony/Desktop/milestone2/data/j_caesar.xml")/data/d,
+  for $d2 in document("file:/Users/tangsheng/Desktop/CodeProjects/XQueryEvaluator/data/large-data.xml")/data/d,
       $id2 in $d2/id/text(),
       $a2 in $d2/a6/text()
   return <tuple> <d2>{$d2}</d2>, <id2>{$id2}</id2>, <a2>{$a2}</a2></tuple>
@@ -17,7 +17,7 @@ join(
 )
   ),
   (
-  for $d3 in document("file:/Users/tony/Desktop/milestone2/data/j_caesar.xml")/data/d,
+  for $d3 in document("file:/Users/tangsheng/Desktop/CodeProjects/XQueryEvaluator/data/large-data.xml")/data/d,
       $id3 in $d3/id/text(),
       $a3 in $d3/a9/text()
   return <tuple> <d3>{$d3}</d3>, <id3>{$id3}</id3>, <a3>{$a3}</a3></tuple>

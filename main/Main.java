@@ -24,21 +24,34 @@ import javax.xml.parsers.ParserConfigurationException;
 
 public class Main {
     public static void main(String[] args) {
-        if (args.length != 3) {
-            System.err.println("Usage: java Main <input-xml> <input-query> <output-xml>");
+        if (args.length != 4) {
+            System.err.println("Usage: java Main <input-xml> <input-query> <query-rewrite-output> <output-xml>");
             System.exit(1);
         }
         
         String inputXmlPath = args[0];  
         String queryFilePath = args[1];
-        String outputXmlPath = args[2];
+        String queryRewritePath = args[2];
+        String outputXmlPath = args[3];
         
         try {
             // Read query from file and trim whitespace
             String query = new String(Files.readAllBytes(Paths.get(queryFilePath))).trim();
             
-            // Evaluate query
-            LinkedList<Node> result = evaluateQuery(query, inputXmlPath);
+            // Evaluate query and get the rewritten query
+            String[] rewrittenQueryHolder = new String[1]; // To hold the rewritten query
+            LinkedList<Node> result = evaluateQuery(query, inputXmlPath, rewrittenQueryHolder);
+            
+            // Write the rewritten query to file
+            if (rewrittenQueryHolder[0] != null) {
+                // Create parent directories if they don't exist
+                File rewriteFile = new File(queryRewritePath);
+                File parentDir = rewriteFile.getParentFile();
+                if (parentDir != null && !parentDir.exists()) {
+                    parentDir.mkdirs();
+                }
+                Files.write(Paths.get(queryRewritePath), rewrittenQueryHolder[0].getBytes());
+            }
             
             // Create a new document
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -51,6 +64,13 @@ public class Main {
                 doc.appendChild(importedNode);
             }
             
+            // Create parent directories for output XML if they don't exist
+            File outputFile = new File(outputXmlPath);
+            File outputParentDir = outputFile.getParentFile();
+            if (outputParentDir != null && !outputParentDir.exists()) {
+                outputParentDir.mkdirs();
+            }
+            
             // Write the result document
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
             Transformer transformer = transformerFactory.newTransformer();
@@ -58,7 +78,7 @@ public class Main {
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
             DOMSource source = new DOMSource(doc);
-            StreamResult streamResult = new StreamResult(new File(outputXmlPath));
+            StreamResult streamResult = new StreamResult(outputFile);
             transformer.transform(source, streamResult);
             
         } catch (Exception e) {
@@ -68,7 +88,7 @@ public class Main {
         }
     }
     
-    private static LinkedList<Node> evaluateQuery(String query, String inputXmlPath) {
+    private static LinkedList<Node> evaluateQuery(String query, String inputXmlPath, String[] rewrittenQueryHolder) {
         boolean isXQuery = isXQuery(query);
         query = query.replaceAll("[“”]", "\""); 
         
@@ -86,6 +106,9 @@ public class Main {
             String rewrittenQuery = RewriteHelper.rewriteXQuery(query);
             System.out.println("Rewritten XQuery: " + rewrittenQuery);
             
+            // Store the rewritten query in the holder array
+            rewrittenQueryHolder[0] = rewrittenQuery.isEmpty() ? query : rewrittenQuery;
+            
             // Use rewritten query if not empty, otherwise use original
             String finalQuery = rewrittenQuery.isEmpty() ? query : rewrittenQuery;
             
@@ -100,6 +123,9 @@ public class Main {
             return result;
         } else {
             query = modifyXPath(query, inputXmlPath);
+            // For XPath, store the modified query
+            rewrittenQueryHolder[0] = query;
+            
             XPathEvaluator evaluator = new XPathEvaluator();
             return evaluateXPath(query, evaluator);
         }
