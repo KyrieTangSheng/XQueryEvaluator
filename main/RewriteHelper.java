@@ -187,6 +187,7 @@ public class RewriteHelper {
 
             // 6) return*
             String returnClause = ctx.returnClause().getText();
+            System.out.println("returnClause: " + returnClause);
             returnClause = modifyReturnClause(returnClause);
 
             sb.append(returnClause);
@@ -281,6 +282,7 @@ public class RewriteHelper {
 
         // Rewrite the original return clause to reference $tuple
         String returnClause = ctx.returnClause().getText();
+        System.out.println("returnClause: " + returnClause);
         returnClause = modifyReturnClause(returnClause);
         finalQuery.append(returnClause);
 
@@ -292,7 +294,9 @@ public class RewriteHelper {
     private static String modifyReturnClause(String returnClause) {
         // Remove 'return' prefix if present
         returnClause = returnClause.replaceFirst("^return", "").trim();
-        
+
+                
+
         // Replace variable references with tuple path accesses
         returnClause = returnClause.replaceAll(
             "\\$([a-zA-Z0-9]+)", 
@@ -305,7 +309,7 @@ public class RewriteHelper {
             "\\$tuple/$1/*/$2"
         );
         
-        return "return " + returnClause;
+        return "return" + returnClause;
     }
 
 
@@ -384,7 +388,7 @@ public class RewriteHelper {
     // Use the ordered list we created earlier to maintain the order of variables
     int count = 0;
     for (String var : orderedVarsInQuery) {
-        if (count++ > 0) sb.append(", ");
+        if (count++ > 0) sb.append(",");
         String bare = var.substring(1); // remove leading '$'
         sb.append("<").append(bare).append(">{")
           .append(var).append("}</").append(bare).append(">");

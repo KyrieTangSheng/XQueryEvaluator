@@ -36,7 +36,7 @@ public class Main {
         
         try {
             // Read query from file and trim whitespace
-            String query = new String(Files.readAllBytes(Paths.get(queryFilePath))).trim();
+            String query = new String(Files.readAllBytes(Paths.get(queryFilePath)));
             
             // Evaluate query and get the rewritten query
             String[] rewrittenQueryHolder = new String[1]; // To hold the rewritten query
@@ -50,7 +50,10 @@ public class Main {
                 if (parentDir != null && !parentDir.exists()) {
                     parentDir.mkdirs();
                 }
-                Files.write(Paths.get(queryRewritePath), rewrittenQueryHolder[0].getBytes());
+
+                String queryForFile = rewrittenQueryHolder[0].replaceAll("\\s+=\\s+", " eq ");
+                
+                Files.write(Paths.get(queryRewritePath), queryForFile.getBytes());
             }
             
             // Create a new document
@@ -102,7 +105,7 @@ public class Main {
         if (isXQuery) {
             // First rewrite the query before modifying document paths
             String rewrittenQuery = RewriteHelper.rewriteXQuery(query);
-            System.out.println("Rewritten XQuery: " + rewrittenQuery);
+            System.out.println(rewrittenQuery);
             
             // Store the rewritten query in the holder array
             rewrittenQueryHolder[0] = rewrittenQuery.isEmpty() ? query : rewrittenQuery;
