@@ -310,84 +310,89 @@ public class RewriteHelper {
 
 
     private static String buildSubquery(Set<String> groupVars,
-                                   XQueryParser.XQueryFLWRContext ctx,
-                                   List<List<String>> conditions,
-                                   boolean[] isLocal) {
-        // We'll gather lines like "for $s in doc(...)//SPEAKER, $stxt in $s/text() ..."
-        // then a local "where ..." if there's a variable-literal condition
-        // finally "return <tuple> ..."
+                               XQueryParser.XQueryFLWRContext ctx,
+                               List<List<String>> conditions,
+                               boolean[] isLocal) {
+    // We'll gather lines like "for $s in doc(...)//SPEAKER, $stxt in $s/text() ..."
+    // then a local "where ..." if there's a variable-literal condition
+    // finally "return <tuple> ..."
 
-        StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
 
-        // 1) for ... in ...
-        boolean first = true;
-        int nFor = ctx.forClause().var().size();
-        for (int i = 0; i < nFor; i++) {
-            String varName = ctx.forClause().var(i).getText();  // e.g. "$s"
-            if (groupVars.contains(varName)) {
-                if (first) {
-                    sb.append("  for ").append(varName).append(" in ")
-                    .append(ctx.forClause().xquery(i).getText());
-                    first = false;
-                } else {
-                    sb.append(",\n      ").append(varName).append(" in ")
-                    .append(ctx.forClause().xquery(i).getText());
-                }
+    // 1) for ... in ...
+    boolean first = true;
+    int nFor = ctx.forClause().var().size();
+    
+    // Create a list to maintain the order of variables as they appear in the original query
+    List<String> orderedVarsInQuery = new ArrayList<>();
+    
+    for (int i = 0; i < nFor; i++) {
+        String varName = ctx.forClause().var(i).getText();  // e.g. "$s"
+        if (groupVars.contains(varName)) {
+            // Add to our ordered list
+            orderedVarsInQuery.add(varName);
+            
+            String xqueryText = ctx.forClause().xquery(i).getText();
+            
+            if (first) {
+                sb.append("for ").append(varName).append(" in ")
+                  .append(xqueryText);
+                first = false;
+            } else {
+                sb.append(",\n    ").append(varName).append(" in ")
+                  .append(xqueryText);
             }
         }
-        sb.append("\n");
+    }
+    sb.append("\n");
 
-        // 2) Local conditions?
-        List<String> localConds = new ArrayList<>();
-        // Check all conditions for local ones that belong to this group
-        for (int i = 0; i < conditions.size(); i++) {
-            if (isLocal[i]) {
-                String left = conditions.get(i).get(0);
-                String right = conditions.get(i).get(1);
-                String leftVar = "$" + left;
-                
-                // Only add if the left variable is in this group
-                if (groupVars.contains(leftVar)) {
-                    if (right.matches("^[A-Za-z0-9]+$")) {
-                        // Right is a literal
-                        localConds.add(leftVar + " eq \"" + right + "\"");
-                    } else {
-                        // Right is a variable
-                        String rightVar = "$" + right;
-                        if (groupVars.contains(rightVar)) {
-                            localConds.add(leftVar + " eq " + rightVar);
-                        }
+    // 2) Local conditions?
+    List<String> localConds = new ArrayList<>();
+    // Check all conditions for local ones that belong to this group
+    for (int i = 0; i < conditions.size(); i++) {
+        if (isLocal[i]) {
+            String left = conditions.get(i).get(0);
+            String right = conditions.get(i).get(1);
+            String leftVar = "$" + left;
+            
+            // Only add if the left variable is in this group
+            if (groupVars.contains(leftVar)) {
+                if (right.matches("^[A-Za-z0-9]+$")) {
+                    // Right is a literal
+                    localConds.add(leftVar + " eq \"" + right + "\"");
+                } else {
+                    // Right is a variable
+                    String rightVar = "$" + right;
+                    if (groupVars.contains(rightVar)) {
+                        localConds.add(leftVar + " eq " + rightVar);
                     }
                 }
             }
         }
-
-            // Add where clause if we have local conditions
-        if (!localConds.isEmpty()) {
-            sb.append("  where ");
-            sb.append(String.join(" and ", localConds));
-            sb.append("\n");
-        }
-    
-
-        // 3) return <tuple> ...
-        sb.append("  return <tuple>");
-
-        // For each variable in this group, produce <varName>{ $varName }</varName>
-        List<String> orderedVars = new ArrayList<>(groupVars);
-        // Collections.reverse(orderedVars);  // Reverse the order
-        
-        int count = 0;
-        for (String var : orderedVars) {
-            if (count++ > 0) sb.append(",");
-            String bare = var.substring(1); // remove leading '$'
-            sb.append(" <").append(bare).append(">{")
-            .append(var).append("}</").append(bare).append(">");
-        }
-        sb.append("</tuple>");
-
-        return sb.toString();
     }
+
+    // Add where clause if we have local conditions
+    if (!localConds.isEmpty()) {
+        sb.append("where ");
+        sb.append(String.join(" and ", localConds));
+        sb.append("\n");
+    }
+
+    // 3) return <tuple> ...
+    sb.append("return <tuple>");
+
+    // Use the ordered list we created earlier to maintain the order of variables
+    int count = 0;
+    for (String var : orderedVarsInQuery) {
+        if (count++ > 0) sb.append(", ");
+        String bare = var.substring(1); // remove leading '$'
+        sb.append("<").append(bare).append(">{")
+          .append(var).append("}</").append(bare).append(">");
+    }
+    sb.append("</tuple>");
+
+    return sb.toString();
+}
 
 
     

@@ -1,14 +1,14 @@
 for $tuple in join(
 (
-  for $s in document("file:/Users/tangsheng/Desktop/CodeProjects/XQueryEvaluator/data/j_caesar.xml")//SPEAKER,
-      $stxt in $s/text()
-  where $stxt eq "CAESAR"
-  return <tuple> <stxt>{$stxt}</stxt>, <s>{$s}</s></tuple>
+for $s in doc("j_caesar.xml")//SPEAKER,
+    $stxt in $s/text()
+where $stxt eq "CAESAR"
+return <tuple><s>{$s}</s>, <stxt>{$stxt}</stxt></tuple>
 ),
 (
-  for $a in document("file:/Users/tangsheng/Desktop/CodeProjects/XQueryEvaluator/data/j_caesar.xml")//ACT,
-      $sp in $a//SPEAKER
-  return <tuple> <sp>{$sp}</sp>, <a>{$a}</a></tuple>
+for $a in doc("j_caesar.xml")//ACT,
+    $sp in $a//SPEAKER
+return <tuple><a>{$a}</a>, <sp>{$sp}</sp></tuple>
 ),
   [s], [sp]
 )

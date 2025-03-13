@@ -98,11 +98,9 @@ public class Main {
             query = "doc(\"" + xmlURL + "\")" + query;
         }
         
-        // For XQuery queries, update any document() call to use absolute URLs.
+        // For XQuery queries
         if (isXQuery) {
-            query = fixDocumentCalls(query, inputXmlPath);
-            
-            // Move rewriting logic here before evaluating
+            // First rewrite the query before modifying document paths
             String rewrittenQuery = RewriteHelper.rewriteXQuery(query);
             System.out.println("Rewritten XQuery: " + rewrittenQuery);
             
@@ -111,6 +109,9 @@ public class Main {
             
             // Use rewritten query if not empty, otherwise use original
             String finalQuery = rewrittenQuery.isEmpty() ? query : rewrittenQuery;
+            
+            // Now fix document calls in the final query
+            finalQuery = fixDocumentCalls(finalQuery, inputXmlPath);
             
             XQueryEvaluator evaluator = new XQueryEvaluator();
             LinkedList<Node> result = evaluateXQuery(finalQuery, evaluator);
